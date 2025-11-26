@@ -158,6 +158,16 @@ export const Concierge: React.FC = () => {
         const sessionPromise = ai.live.connect({
             model: 'gemini-2.0-flash-exp',
             systemInstruction: HOTEL_SYSTEM_INSTRUCTION,
+            generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: {
+                            voiceName: "Aoede"
+                        }
+                    }
+                }
+            },
             callbacks: {
                 onopen: () => {
                     console.log("Voice session connected successfully");
@@ -171,26 +181,36 @@ export const Concierge: React.FC = () => {
                     
                     // Wait a bit before starting audio processing
                     setTimeout(() => {
-                        if (inputAudioContext.current && session.current) {
-                            const source = inputAudioContext.current.createMediaStreamSource(stream);
+                        if (inputAudioContext.current && session.current && streamRef.current) {
+                            const source = inputAudioContext.current.createMediaStreamSource(streamRef.current);
                             const scriptProcessor = inputAudioContext.current.createScriptProcessor(4096, 1, 1);
                             
                             scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
                                 if (session.current && isConnected) {
-                                    const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-                                    const pcmBlob = createBlob(inputData);
                                     try {
-                                        session.current.sendRealtimeInput({ media: pcmBlob });
+                                        const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                                        
+                                        // Only send audio if there's actual sound (prevents silence from causing issues)
+                                        const hasSound = inputData.some(sample => Math.abs(sample) > 0.01);
+                                        if (hasSound) {
+                                            const pcmBlob = createBlob(inputData);
+                                            session.current.sendRealtimeInput({ media: pcmBlob });
+                                        }
                                     } catch (error) {
-                                        console.log("Error sending audio:", error);
+                                        console.log("Error sending audio (non-fatal):", error);
+                                        // Don't disconnect on audio send errors
                                     }
                                 }
                             };
                             
                             source.connect(scriptProcessor);
                             scriptProcessor.connect(inputAudioContext.current.destination);
+                            
+                            // Store references for cleanup
+                            session.current._audioSource = source;
+                            session.current._scriptProcessor = scriptProcessor;
                         }
-                    }, 1000);
+                    }, 1500); // Increased delay to ensure connection is stable
                 },
                 onmessage: async (message: LiveServerMessage) => {
                     // Handle Audio
@@ -227,14 +247,23 @@ export const Concierge: React.FC = () => {
                     }
                 },
                 onerror: (err) => {
-                    console.error("Live API Error", err);
+                    console.error("Live API Error Details:", err);
                     setIsConnected(false);
-                    // Don't immediately stop, let user try again
+                    
+                    // Add specific error message
+                    setMessages(prev => [...prev, { 
+                        role: 'model', 
+                        text: `❌ Voice connection error: ${err.message || 'Unknown error'}. Please try again or continue with text chat.` 
+                    }]);
                 },
                 onclose: () => {
-                    console.log("Voice session closed");
+                    console.log("Voice session closed unexpectedly");
                     setIsConnected(false);
-                    stopVoiceSession();
+                    // Don't automatically stop voice session, let user manually retry
+                    setMessages(prev => [...prev, { 
+                        role: 'model', 
+                        text: '🔄 Connection lost. Click the phone button to reconnect or continue with text chat.' 
+                    }]);
                 }
             },
             config: {
@@ -247,6 +276,22 @@ export const Concierge: React.FC = () => {
         });
         
         session.current = await sessionPromise;
+        
+        // Add connection keepalive
+        const keepAlive = setInterval(() => {
+            if (session.current && isConnected) {
+                try {
+                    // Send empty audio to keep connection alive
+                    const silentAudio = new Float32Array(1024);
+                    const pcmBlob = createBlob(silentAudio);
+                    session.current.sendRealtimeInput({ media: pcmBlob });
+                } catch (error) {
+                    console.log("Keepalive failed:", error);
+                }
+            }
+        }, 30000); // Every 30 seconds
+        
+        session.current._keepAlive = keepAlive;
 
     } catch (e) {
         console.error("Failed to start voice session", e);
@@ -263,6 +308,19 @@ export const Concierge: React.FC = () => {
   };
 
   const stopVoiceSession = () => {
+    // Clear keepalive interval
+    if (session.current?._keepAlive) {
+        clearInterval(session.current._keepAlive);
+    }
+    
+    // Clean up audio nodes
+    if (session.current?._audioSource) {
+        session.current._audioSource.disconnect();
+    }
+    if (session.current?._scriptProcessor) {
+        session.current._scriptProcessor.disconnect();
+    }
+    
     // Try to close session if method exists, otherwise just cleanup context
     try {
         if (session.current && typeof session.current.close === 'function') {
@@ -289,6 +347,7 @@ export const Concierge: React.FC = () => {
     
     setIsVoiceMode(false);
     setIsConnected(false);
+    session.current = null;
     nextStartTime.current = 0;
     sources.current.clear();
   };
