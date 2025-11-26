@@ -163,7 +163,7 @@ export const Concierge: React.FC = () => {
                 speechConfig: {
                     voiceConfig: {
                         prebuiltVoiceConfig: {
-                            voiceName: "Aoede"
+                            voiceName: "Puck"
                         }
                     }
                 }
@@ -179,38 +179,8 @@ export const Concierge: React.FC = () => {
                         text: '🎉 Voice mode connected! You can now speak to me and I\'ll respond with voice. Try saying "Tell me about the rooms" or "What\'s nearby?"' 
                     }]);
                     
-                    // Wait a bit before starting audio processing
-                    setTimeout(() => {
-                        if (inputAudioContext.current && session.current && streamRef.current) {
-                            const source = inputAudioContext.current.createMediaStreamSource(streamRef.current);
-                            const scriptProcessor = inputAudioContext.current.createScriptProcessor(4096, 1, 1);
-                            
-                            scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
-                                if (session.current && isConnected) {
-                                    try {
-                                        const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-                                        
-                                        // Only send audio if there's actual sound (prevents silence from causing issues)
-                                        const hasSound = inputData.some(sample => Math.abs(sample) > 0.01);
-                                        if (hasSound) {
-                                            const pcmBlob = createBlob(inputData);
-                                            session.current.sendRealtimeInput({ media: pcmBlob });
-                                        }
-                                    } catch (error) {
-                                        console.log("Error sending audio (non-fatal):", error);
-                                        // Don't disconnect on audio send errors
-                                    }
-                                }
-                            };
-                            
-                            source.connect(scriptProcessor);
-                            scriptProcessor.connect(inputAudioContext.current.destination);
-                            
-                            // Store references for cleanup
-                            session.current._audioSource = source;
-                            session.current._scriptProcessor = scriptProcessor;
-                        }
-                    }, 1500); // Increased delay to ensure connection is stable
+                    // Simplified audio setup - no immediate processing to avoid connection issues
+                    console.log("Voice session ready for audio input");
                 },
                 onmessage: async (message: LiveServerMessage) => {
                     // Handle Audio
@@ -276,22 +246,7 @@ export const Concierge: React.FC = () => {
         });
         
         session.current = await sessionPromise;
-        
-        // Add connection keepalive
-        const keepAlive = setInterval(() => {
-            if (session.current && isConnected) {
-                try {
-                    // Send empty audio to keep connection alive
-                    const silentAudio = new Float32Array(1024);
-                    const pcmBlob = createBlob(silentAudio);
-                    session.current.sendRealtimeInput({ media: pcmBlob });
-                } catch (error) {
-                    console.log("Keepalive failed:", error);
-                }
-            }
-        }, 30000); // Every 30 seconds
-        
-        session.current._keepAlive = keepAlive;
+        console.log("Voice session established and ready");
 
     } catch (e) {
         console.error("Failed to start voice session", e);
