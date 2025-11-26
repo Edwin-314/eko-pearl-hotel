@@ -65,6 +65,29 @@ You are Ayo, the sophisticated, warm, and highly knowledgeable AI Concierge for 
 - **Bookings:** You cannot process payments directly. Direct guests to the "Book Now" button for rooms or offer to "request" a spa/dinner reservation (simulated).
 `;
 
+// Function to list available models
+export const listAvailableModels = async (): Promise<string[]> => {
+  if (!aiClient) return [];
+  
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${import.meta.env.VITE_GEMINI_API_KEY}`);
+    const data = await response.json();
+    
+    if (data.models) {
+      const modelNames = data.models
+        .filter((model: any) => model.supportedGenerationMethods?.includes('generateContent'))
+        .map((model: any) => model.name.replace('models/', ''));
+      
+      console.log('Available models:', modelNames);
+      return modelNames;
+    }
+    return [];
+  } catch (error) {
+    console.error('Error listing models:', error);
+    return [];
+  }
+};
+
 export const generateConciergeResponse = async (
   userMessage: string,
   history: { role: 'user' | 'model'; text: string }[]
@@ -77,36 +100,29 @@ export const generateConciergeResponse = async (
   }
 
   try {
-    console.log('Creating model...');
+    console.log('Listing available models...');
+    const availableModels = await listAvailableModels();
     
-    // Try different model names in order of preference
-    const modelNames = ['gemini-1.5-pro', 'gemini-pro', 'gemini-1.5-flash-latest', 'models/gemini-1.5-pro'];
-    let model;
-    let lastError;
-    
-    for (const modelName of modelNames) {
-      try {
-        console.log(`Trying model: ${modelName}`);
-        model = aiClient.getGenerativeModel({ model: modelName });
-        
-        const conversationContext = history.map(msg => `${msg.role === 'user' ? 'Guest' : 'Ayo'}: ${msg.text}`).join('\n');
-        const fullPrompt = `${HOTEL_SYSTEM_INSTRUCTION}\n\n${conversationContext}\nGuest: ${userMessage}\nAyo:`;
-
-        console.log('Sending request to Gemini API...');
-        const result = await model.generateContent(fullPrompt);
-        const response = result.response;
-        
-        console.log(`Gemini API response received successfully with model: ${modelName}`);
-        return response.text() || "I apologize, I am having trouble finding that information.";
-      } catch (error) {
-        console.log(`Model ${modelName} failed:`, error.message);
-        lastError = error;
-        continue;
-      }
+    if (availableModels.length === 0) {
+      console.error('No available models found');
+      return "I'm sorry, no available AI models were found. Please check your API key permissions.";
     }
     
-    // If all models failed, throw the last error
-    throw lastError;
+    // Use the first available model that supports generateContent
+    const modelName = availableModels[0];
+    console.log(`Using model: ${modelName}`);
+    
+    const model = aiClient.getGenerativeModel({ model: modelName });
+    
+    const conversationContext = history.map(msg => `${msg.role === 'user' ? 'Guest' : 'Ayo'}: ${msg.text}`).join('\n');
+    const fullPrompt = `${HOTEL_SYSTEM_INSTRUCTION}\n\n${conversationContext}\nGuest: ${userMessage}\nAyo:`;
+
+    console.log('Sending request to Gemini API...');
+    const result = await model.generateContent(fullPrompt);
+    const response = result.response;
+    
+    console.log(`Gemini API response received successfully with model: ${modelName}`);
+    return response.text() || "I apologize, I am having trouble finding that information.";
   } catch (error) {
     console.error("Gemini API Error Details:", {
       message: error.message,
