@@ -108,8 +108,12 @@ export const generateConciergeResponse = async (
       return "I'm sorry, no available AI models were found. Please check your API key permissions.";
     }
     
-    // Use the first available model that supports generateContent
-    const modelName = availableModels[0];
+    // Prefer stable models over preview models
+    const preferredModels = ['gemini-1.5-flash', 'gemini-1.0-pro', 'gemini-pro'];
+    let modelName = availableModels.find(model => 
+      preferredModels.some(preferred => model.includes(preferred))
+    ) || availableModels[0];
+    
     console.log(`Using model: ${modelName}`);
     
     const model = aiClient.getGenerativeModel({ model: modelName });
@@ -130,6 +134,16 @@ export const generateConciergeResponse = async (
       statusText: error.statusText,
       error: error
     });
+    
+    // Handle specific error types
+    if (error.status === 429) {
+      return "I'm experiencing high demand right now. Please wait a moment and try again.";
+    } else if (error.status === 403) {
+      return "There seems to be an API permissions issue. Please check your API key settings.";
+    } else if (error.status === 400) {
+      return "I had trouble understanding your request. Could you please rephrase it?";
+    }
+    
     return "I am currently experiencing a brief connection issue. Please try again in a moment.";
   }
 };
