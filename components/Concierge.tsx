@@ -119,8 +119,19 @@ export const Concierge: React.FC = () => {
     // Prevent multiple sessions
     if (isVoiceMode || session.current) {
         console.log("Voice session already active");
+        // Show a more obvious message to the user
+        setMessages(prev => [...prev, { 
+            role: 'model', 
+            text: '🎤 Voice mode is already active! You can speak to me now, or click "End Voice Call" to switch back to text.' 
+        }]);
         return;
     }
+
+    // Add a message to show voice mode is starting
+    setMessages(prev => [...prev, { 
+        role: 'model', 
+        text: '🎤 Starting voice mode... Please allow microphone access when prompted!' 
+    }]);
 
     setIsVoiceMode(true);
     setIsConnected(false);
@@ -151,6 +162,12 @@ export const Concierge: React.FC = () => {
                 onopen: () => {
                     console.log("Voice session connected successfully");
                     setIsConnected(true);
+                    
+                    // Add success message to chat
+                    setMessages(prev => [...prev, { 
+                        role: 'model', 
+                        text: '🎉 Voice mode connected! You can now speak to me and I\'ll respond with voice. Try saying "Tell me about the rooms" or "What\'s nearby?"' 
+                    }]);
                     
                     // Wait a bit before starting audio processing
                     setTimeout(() => {
@@ -281,10 +298,32 @@ export const Concierge: React.FC = () => {
       {/* Floating Action Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 z-40 bg-eko-green text-white p-4 rounded-full shadow-2xl hover:bg-emerald-800 transition-all duration-300 transform hover:scale-110 ${isOpen ? 'hidden' : 'flex'} items-center gap-2`}
+        className={`fixed bottom-6 right-6 z-40 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 ${
+          isOpen ? 'hidden' : 'flex'
+        } items-center gap-2 ${
+          isVoiceMode && isConnected 
+            ? 'bg-green-500 animate-pulse' 
+            : isVoiceMode 
+            ? 'bg-yellow-500' 
+            : 'bg-eko-green hover:bg-emerald-800'
+        }`}
       >
-        <Sparkles size={20} className="text-eko-gold" />
-        <span className="font-serif font-medium pr-2">Ask Ayo</span>
+        {isVoiceMode && isConnected ? (
+          <>
+            <Mic size={20} className="text-white animate-pulse" />
+            <span className="font-serif font-medium pr-2">🎤 Live</span>
+          </>
+        ) : isVoiceMode ? (
+          <>
+            <Loader2 size={20} className="text-white animate-spin" />
+            <span className="font-serif font-medium pr-2">Connecting...</span>
+          </>
+        ) : (
+          <>
+            <Sparkles size={20} className="text-eko-gold" />
+            <span className="font-serif font-medium pr-2">Ask Ayo</span>
+          </>
+        )}
       </button>
 
       {/* Chat Interface */}
@@ -320,14 +359,24 @@ export const Concierge: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
                  {/* Toggle Voice Mode */}
-                {!isVoiceMode && (
+                {!isVoiceMode ? (
                     <button 
                         onClick={startVoiceSession}
-                        className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all"
-                        title="Call Ayo"
+                        className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all hover:scale-110"
+                        title="Start Voice Call with Ayo"
                     >
                         <Phone size={18} />
                     </button>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <div className={`p-2 rounded-full ${isConnected ? 'bg-green-500/20' : 'bg-yellow-500/20'}`}>
+                            {isConnected ? (
+                                <Mic className={`w-[18px] h-[18px] ${isConnected ? 'text-green-400' : 'text-yellow-400'} animate-pulse`} />
+                            ) : (
+                                <Loader2 className="w-[18px] h-[18px] text-yellow-400 animate-spin" />
+                            )}
+                        </div>
+                    </div>
                 )}
                 <button onClick={() => { setIsOpen(false); stopVoiceSession(); }} className="text-white/70 hover:text-white transition-colors">
                     <X size={24} />
@@ -337,7 +386,55 @@ export const Concierge: React.FC = () => {
 
           {/* Main Content Area */}
           {isVoiceMode ? (
-              <div className="flex-1 bg-eko-charcoal flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-br from-eko-green/5 to-eko-gold/5">
+                  <div className="text-center space-y-6">
+                      <div className="relative">
+                          <div className={`w-24 h-24 mx-auto rounded-full border-4 flex items-center justify-center transition-all duration-300 ${
+                              isConnected 
+                                  ? 'border-green-400 bg-green-50 animate-pulse' 
+                                  : 'border-yellow-400 bg-yellow-50'
+                          }`}>
+                              {isConnected ? (
+                                  <Mic className="w-12 h-12 text-green-600" />
+                              ) : (
+                                  <Loader2 className="w-12 h-12 text-yellow-600 animate-spin" />
+                              )}
+                          </div>
+                          {isConnected && (
+                              <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full border-2 border-green-400 animate-ping"></div>
+                          )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                          <h3 className="text-xl font-serif font-bold text-eko-charcoal">
+                              {isConnected ? '🎤 Voice Mode Active' : '🔄 Connecting...'}
+                          </h3>
+                          <p className="text-eko-stone text-sm">
+                              {isConnected 
+                                  ? 'Speak now - Ayo is listening and will respond with voice' 
+                                  : 'Setting up voice connection with Ayo...'
+                              }
+                          </p>
+                      </div>
+
+                      {isConnected && (
+                          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-eko-green/20">
+                              <p className="text-xs text-eko-stone flex items-center justify-center gap-2">
+                                  <Volume2 className="w-4 h-4" />
+                                  Try saying: "Tell me about the rooms" or "What's nearby?"
+                              </p>
+                          </div>
+                      )}
+
+                      <button 
+                          onClick={stopVoiceSession}
+                          className="mt-6 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
+                      >
+                          <PhoneOff size={18} />
+                          End Voice Call
+                      </button>
+                  </div>
+              </div> className="flex-1 bg-eko-charcoal flex flex-col items-center justify-center relative overflow-hidden">
                   {/* Abstract Background Pattern */}
                   <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#D97706 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                   
