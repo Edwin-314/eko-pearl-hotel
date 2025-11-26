@@ -78,7 +78,7 @@ export const generateConciergeResponse = async (
 
   try {
     console.log('Creating model...');
-    const model = aiClient.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = aiClient.getGenerativeModel({ model: 'gemini-pro' });
     
     const conversationContext = history.map(msg => `${msg.role === 'user' ? 'Guest' : 'Ayo'}: ${msg.text}`).join('\n');
     const fullPrompt = `${HOTEL_SYSTEM_INSTRUCTION}\n\n${conversationContext}\nGuest: ${userMessage}\nAyo:`;

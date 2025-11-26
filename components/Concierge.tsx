@@ -107,13 +107,17 @@ export const Concierge: React.FC = () => {
     }
   };
 
-  // Voice Mode Handler
+  // Voice Mode Handler - Temporarily disabled
   const startVoiceSession = async () => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
         console.error("API Key missing");
         return;
     }
+
+    // Voice mode temporarily disabled - requires different package
+    alert("Voice mode is temporarily unavailable. Please use text chat.");
+    return;
 
     setIsVoiceMode(true);
     setIsConnected(false);
