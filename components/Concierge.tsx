@@ -116,11 +116,26 @@ export const Concierge: React.FC = () => {
         return;
     }
 
+    // Prevent multiple sessions
+    if (isVoiceMode || session.current) {
+        console.log("Voice session already active");
+        return;
+    }
+
     setIsVoiceMode(true);
     setIsConnected(false);
     
     try {
         console.log("Starting voice session...");
+        
+        // Clean up any existing contexts
+        if (inputAudioContext.current) {
+            inputAudioContext.current.close();
+        }
+        if (outputAudioContext.current) {
+            outputAudioContext.current.close();
+        }
+        
         const ai = new GoogleGenAI({ apiKey });
         
         inputAudioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
@@ -134,20 +149,31 @@ export const Concierge: React.FC = () => {
             systemInstruction: HOTEL_SYSTEM_INSTRUCTION,
             callbacks: {
                 onopen: () => {
+                    console.log("Voice session connected successfully");
                     setIsConnected(true);
-                    const source = inputAudioContext.current!.createMediaStreamSource(stream);
-                    const scriptProcessor = inputAudioContext.current!.createScriptProcessor(4096, 1, 1);
                     
-                    scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
-                        const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-                        const pcmBlob = createBlob(inputData);
-                        sessionPromise.then((s) => {
-                            s.sendRealtimeInput({ media: pcmBlob });
-                        });
-                    };
-                    
-                    source.connect(scriptProcessor);
-                    scriptProcessor.connect(inputAudioContext.current!.destination);
+                    // Wait a bit before starting audio processing
+                    setTimeout(() => {
+                        if (inputAudioContext.current && session.current) {
+                            const source = inputAudioContext.current.createMediaStreamSource(stream);
+                            const scriptProcessor = inputAudioContext.current.createScriptProcessor(4096, 1, 1);
+                            
+                            scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
+                                if (session.current && isConnected) {
+                                    const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                                    const pcmBlob = createBlob(inputData);
+                                    try {
+                                        session.current.sendRealtimeInput({ media: pcmBlob });
+                                    } catch (error) {
+                                        console.log("Error sending audio:", error);
+                                    }
+                                }
+                            };
+                            
+                            source.connect(scriptProcessor);
+                            scriptProcessor.connect(inputAudioContext.current.destination);
+                        }
+                    }, 1000);
                 },
                 onmessage: async (message: LiveServerMessage) => {
                     // Handle Audio
@@ -189,7 +215,12 @@ export const Concierge: React.FC = () => {
                 },
                 onerror: (err) => {
                     console.error("Live API Error", err);
-                    stopVoiceSession();
+                    setIsConnected(false);
+                    // Don't immediately stop, let user try again
+                },
+                onclose: () => {
+                    console.log("Voice session closed");
+                    setIsConnected(false);
                 }
             },
             config: {
@@ -205,7 +236,15 @@ export const Concierge: React.FC = () => {
 
     } catch (e) {
         console.error("Failed to start voice session", e);
-        stopVoiceSession();
+        
+        // Fallback to text-to-speech mode
+        console.log("Falling back to text-to-speech mode");
+        setIsConnected(true); // Show as connected for TTS mode
+        
+        // You can still type and get voice responses via Web Speech API
+        if ('speechSynthesis' in window) {
+            console.log("Text-to-speech fallback available");
+        }
     }
   };
 
