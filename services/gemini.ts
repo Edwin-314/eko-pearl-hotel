@@ -78,17 +78,35 @@ export const generateConciergeResponse = async (
 
   try {
     console.log('Creating model...');
-    const model = aiClient.getGenerativeModel({ model: 'gemini-pro' });
     
-    const conversationContext = history.map(msg => `${msg.role === 'user' ? 'Guest' : 'Ayo'}: ${msg.text}`).join('\n');
-    const fullPrompt = `${HOTEL_SYSTEM_INSTRUCTION}\n\n${conversationContext}\nGuest: ${userMessage}\nAyo:`;
+    // Try different model names in order of preference
+    const modelNames = ['gemini-1.5-pro', 'gemini-pro', 'gemini-1.5-flash-latest', 'models/gemini-1.5-pro'];
+    let model;
+    let lastError;
+    
+    for (const modelName of modelNames) {
+      try {
+        console.log(`Trying model: ${modelName}`);
+        model = aiClient.getGenerativeModel({ model: modelName });
+        
+        const conversationContext = history.map(msg => `${msg.role === 'user' ? 'Guest' : 'Ayo'}: ${msg.text}`).join('\n');
+        const fullPrompt = `${HOTEL_SYSTEM_INSTRUCTION}\n\n${conversationContext}\nGuest: ${userMessage}\nAyo:`;
 
-    console.log('Sending request to Gemini API...');
-    const result = await model.generateContent(fullPrompt);
-    const response = result.response;
+        console.log('Sending request to Gemini API...');
+        const result = await model.generateContent(fullPrompt);
+        const response = result.response;
+        
+        console.log(`Gemini API response received successfully with model: ${modelName}`);
+        return response.text() || "I apologize, I am having trouble finding that information.";
+      } catch (error) {
+        console.log(`Model ${modelName} failed:`, error.message);
+        lastError = error;
+        continue;
+      }
+    }
     
-    console.log('Gemini API response received successfully');
-    return response.text() || "I apologize, I am having trouble finding that information.";
+    // If all models failed, throw the last error
+    throw lastError;
   } catch (error) {
     console.error("Gemini API Error Details:", {
       message: error.message,
