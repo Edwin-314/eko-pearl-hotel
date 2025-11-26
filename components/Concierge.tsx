@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, Sparkles, Loader2, Mic, Phone, PhoneOff, Volume
 import { generateConciergeResponse, HOTEL_SYSTEM_INSTRUCTION } from '../services/gemini';
 import { ChatMessage } from '../types';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, LiveServerMessage, Modality, Blob } from "@google/genai";
 
 // Helper functions for Audio Processing
 function createBlob(data: Float32Array): Blob {
@@ -107,7 +108,7 @@ export const Concierge: React.FC = () => {
     }
   };
 
-  // Voice Mode Handler - Temporarily disabled
+  // Voice Mode Handler
   const startVoiceSession = async () => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
@@ -115,15 +116,12 @@ export const Concierge: React.FC = () => {
         return;
     }
 
-    // Voice mode temporarily disabled - requires different package
-    alert("Voice mode is temporarily unavailable. Please use text chat.");
-    return;
-
     setIsVoiceMode(true);
     setIsConnected(false);
     
     try {
-        const ai = new GoogleGenerativeAI(apiKey);
+        console.log("Starting voice session...");
+        const ai = new GoogleGenAI({ apiKey });
         
         inputAudioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
         outputAudioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
@@ -132,7 +130,8 @@ export const Concierge: React.FC = () => {
         streamRef.current = stream;
         
         const sessionPromise = ai.live.connect({
-            model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+            model: 'gemini-2.0-flash-exp',
+            systemInstruction: HOTEL_SYSTEM_INSTRUCTION,
             callbacks: {
                 onopen: () => {
                     setIsConnected(true);
