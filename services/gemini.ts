@@ -3,8 +3,9 @@ import { GoogleGenAI } from "@google/genai";
 let aiClient: GoogleGenAI | null = null;
 
 // Initialize client with environment variable safely
-if (process.env.API_KEY) {
-  aiClient = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+if (apiKey) {
+  aiClient = new GoogleGenAI({ apiKey });
 }
 
 export const HOTEL_SYSTEM_INSTRUCTION = `
@@ -69,20 +70,15 @@ export const generateConciergeResponse = async (
   }
 
   try {
-    const model = aiClient.models;
+    const model = aiClient.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     const conversationContext = history.map(msg => `${msg.role === 'user' ? 'Guest' : 'Ayo'}: ${msg.text}`).join('\n');
-    const fullPrompt = `${conversationContext}\nGuest: ${userMessage}\nAyo:`;
+    const fullPrompt = `${HOTEL_SYSTEM_INSTRUCTION}\n\n${conversationContext}\nGuest: ${userMessage}\nAyo:`;
 
-    const response = await model.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: fullPrompt,
-      config: {
-        systemInstruction: HOTEL_SYSTEM_INSTRUCTION,
-      }
-    });
+    const result = await model.generateContent(fullPrompt);
+    const response = await result.response;
 
-    return response.text || "I apologize, I am having trouble finding that information.";
+    return response.text() || "I apologize, I am having trouble finding that information.";
   } catch (error) {
     console.error("Gemini API Error:", error);
     return "I am currently experiencing a brief connection issue. Please try again in a moment.";

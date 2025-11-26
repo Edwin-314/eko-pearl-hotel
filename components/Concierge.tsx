@@ -109,7 +109,8 @@ export const Concierge: React.FC = () => {
 
   // Voice Mode Handler
   const startVoiceSession = async () => {
-    if (!process.env.API_KEY) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
         console.error("API Key missing");
         return;
     }
@@ -118,7 +119,7 @@ export const Concierge: React.FC = () => {
     setIsConnected(false);
     
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey });
         
         inputAudioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
         outputAudioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
