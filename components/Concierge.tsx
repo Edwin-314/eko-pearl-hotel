@@ -209,10 +209,6 @@ export const Concierge: React.FC = () => {
                         nextStartTime.current = 0;
                     }
                 },
-                onclose: () => {
-                    setIsConnected(false);
-                    stopVoiceSession();
-                },
                 onerror: (err) => {
                     console.error("Live API Error", err);
                     setIsConnected(false);
@@ -221,6 +217,7 @@ export const Concierge: React.FC = () => {
                 onclose: () => {
                     console.log("Voice session closed");
                     setIsConnected(false);
+                    stopVoiceSession();
                 }
             },
             config: {
