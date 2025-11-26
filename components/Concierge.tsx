@@ -434,50 +434,6 @@ export const Concierge: React.FC = () => {
                           End Voice Call
                       </button>
                   </div>
-              </div> className="flex-1 bg-eko-charcoal flex flex-col items-center justify-center relative overflow-hidden">
-                  {/* Abstract Background Pattern */}
-                  <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#D97706 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-                  
-                  {/* Voice Visualizer */}
-                  <div className="relative z-10 flex flex-col items-center gap-8 w-full px-8">
-                      
-                      <div className="text-white/60 font-serif italic mb-4 text-center">
-                          {isConnected ? "Listening..." : "Connecting to secure line..."}
-                      </div>
-
-                      <div className={`w-40 h-40 rounded-full border-2 flex items-center justify-center transition-all duration-1000 relative ${isConnected ? 'border-eko-gold/50' : 'border-white/10'}`}>
-                        {/* Ripple effects */}
-                        {isConnected && (
-                            <>
-                                <div className="absolute inset-0 rounded-full border border-eko-gold/30 animate-ping opacity-20"></div>
-                                <div className="absolute -inset-4 rounded-full border border-eko-gold/20 animate-pulse opacity-30"></div>
-                            </>
-                        )}
-                        
-                        <div className="w-32 h-32 rounded-full bg-eko-green overflow-hidden relative shadow-2xl z-10">
-                            <img 
-                                src="https://images.unsplash.com/photo-1531384441138-2736e62e0919?q=80&w=300&auto=format&fit=crop" 
-                                alt="Ayo Large" 
-                                className={`w-full h-full object-cover transition-opacity duration-500 ${isConnected ? 'opacity-100' : 'opacity-70'}`}
-                            />
-                        </div>
-                      </div>
-
-                      <div className="text-center space-y-2">
-                         <h4 className="text-white font-serif text-xl">Ayo</h4>
-                         <p className="text-white/50 text-sm">AI Concierge</p>
-                      </div>
-
-                      {/* Controls */}
-                      <div className="mt-8 flex gap-6">
-                          <button 
-                            onClick={stopVoiceSession}
-                            className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105"
-                          >
-                              <PhoneOff size={24} />
-                          </button>
-                      </div>
-                  </div>
               </div>
           ) : (
               <>
