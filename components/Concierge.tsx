@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Sparkles, Loader2, Mic, Phone, PhoneOff, Volume2, User } from 'lucide-react';
 import { generateConciergeResponse, HOTEL_SYSTEM_INSTRUCTION } from '../services/gemini';
 import { ChatMessage } from '../types';
-import { GoogleGenAI, LiveServerMessage, Modality, Blob } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Helper functions for Audio Processing
 function createBlob(data: Float32Array): Blob {
@@ -119,7 +119,7 @@ export const Concierge: React.FC = () => {
     setIsConnected(false);
     
     try {
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenerativeAI(apiKey);
         
         inputAudioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
         outputAudioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});

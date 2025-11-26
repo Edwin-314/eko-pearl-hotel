@@ -1,13 +1,13 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-let aiClient: GoogleGenAI | null = null;
+let aiClient: GoogleGenerativeAI | null = null;
 
 // Initialize client with environment variable safely
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 console.log('API Key check:', apiKey ? 'Found' : 'Missing', apiKey ? `Length: ${apiKey.length}` : '');
 if (apiKey) {
-  aiClient = new GoogleGenAI({ apiKey });
-  console.log('GoogleGenAI client initialized successfully');
+  aiClient = new GoogleGenerativeAI(apiKey);
+  console.log('GoogleGenerativeAI client initialized successfully');
 } else {
   console.error('VITE_GEMINI_API_KEY environment variable is missing');
 }
@@ -85,7 +85,7 @@ export const generateConciergeResponse = async (
 
     console.log('Sending request to Gemini API...');
     const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
+    const response = result.response;
     
     console.log('Gemini API response received successfully');
     return response.text() || "I apologize, I am having trouble finding that information.";
