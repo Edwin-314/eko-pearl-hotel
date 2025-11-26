@@ -1,0 +1,7 @@
+{
+  "name": "Eko Pearl Hotel",
+  "description": "A modern, elegant 3-star hotel in Lagos, Nigeria, blending European aesthetics with vibrant local culture.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
