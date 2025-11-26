@@ -4,8 +4,12 @@ let aiClient: GoogleGenAI | null = null;
 
 // Initialize client with environment variable safely
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+console.log('API Key check:', apiKey ? 'Found' : 'Missing', apiKey ? `Length: ${apiKey.length}` : '');
 if (apiKey) {
   aiClient = new GoogleGenAI({ apiKey });
+  console.log('GoogleGenAI client initialized successfully');
+} else {
+  console.error('VITE_GEMINI_API_KEY environment variable is missing');
 }
 
 export const HOTEL_SYSTEM_INSTRUCTION = `
@@ -65,22 +69,33 @@ export const generateConciergeResponse = async (
   userMessage: string,
   history: { role: 'user' | 'model'; text: string }[]
 ): Promise<string> => {
+  console.log('generateConciergeResponse called with:', { userMessage, historyLength: history.length });
+  
   if (!aiClient) {
+    console.error('AI Client is null - API key likely missing');
     return "I'm sorry, I cannot connect to the concierge service at the moment. Please check the API configuration.";
   }
 
   try {
+    console.log('Creating model...');
     const model = aiClient.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     const conversationContext = history.map(msg => `${msg.role === 'user' ? 'Guest' : 'Ayo'}: ${msg.text}`).join('\n');
     const fullPrompt = `${HOTEL_SYSTEM_INSTRUCTION}\n\n${conversationContext}\nGuest: ${userMessage}\nAyo:`;
 
+    console.log('Sending request to Gemini API...');
     const result = await model.generateContent(fullPrompt);
     const response = await result.response;
-
+    
+    console.log('Gemini API response received successfully');
     return response.text() || "I apologize, I am having trouble finding that information.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini API Error Details:", {
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText,
+      error: error
+    });
     return "I am currently experiencing a brief connection issue. Please try again in a moment.";
   }
 };
